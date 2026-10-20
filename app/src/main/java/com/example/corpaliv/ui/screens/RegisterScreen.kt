@@ -2,17 +2,17 @@
 package com.example.corpaliv.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun RegistroScreen() {
+fun RegisterScreen(
+    onIrRegistroPersona: () -> Unit,
+    onIrRegistroEmpresa: () -> Unit
+) {
 
     Column(
         modifier = Modifier
@@ -37,9 +37,7 @@ fun RegistroScreen() {
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = {
-                // Próximamente: formulario persona natural
-            },
+            onClick = onIrRegistroPersona,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Persona natural")
@@ -48,9 +46,7 @@ fun RegistroScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedButton(
-            onClick = {
-                // Próximamente: formulario empresa
-            },
+            onClick = onIrRegistroEmpresa,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Empresa")
