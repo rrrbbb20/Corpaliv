@@ -1,192 +1,196 @@
 
 package com.example.corpaliv.ui.screens
 
-import android.util.Patterns
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.corpaliv.utils.validarRut
-
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.corpaliv.viewmodel.RegistroViewModel
 
 @Composable
-fun RegistroPersonaScreen() {
-    // 1. Estados de los campos del formulario
-    var nombre by remember { mutableStateOf("") }
-    var rut by remember { mutableStateOf("") }
-    var correo by remember { mutableStateOf("") }
-    var contrasena by remember { mutableStateOf("") }
-    var confirmarContrasena by remember { mutableStateOf("") }
-    var aceptaTerminos by remember { mutableStateOf(false) }
+fun RegistroPersonaScreen(
+    viewModel: RegistroViewModel
+) {
+    val estado by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // 2. Estado para mostrar mensajes de validación
-    var mensaje by remember { mutableStateOf("") }
-
-    // 3. Contenedor principal
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(20.dp)
     ) {
 
-        // Título
         Text(
-            text = "Registro de persona natural",
+            text = "Registro de usuario",
             style = MaterialTheme.typography.headlineMedium
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Nombre
+
+        OutlinedTextField(
+            value = estado.nombre,
+            onValueChange = viewModel::cambiarNombre,
+            label = { Text("Nombre completo") },
+            isError = estado.errorNombre.isNotEmpty(),
+            supportingText = {
+                if (estado.errorNombre.isNotEmpty()) {
+                    Text(estado.errorNombre)
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            enabled = !estado.registrando
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
-            text = "Completa tus datos para crear una cuenta.",
-            style = MaterialTheme.typography.bodyLarge
-        )
+        // RUT
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // 4. Nombre completo
         OutlinedTextField(
-            value = nombre,
-            onValueChange = { nombre = it },
-            label = { Text("Nombre completo") },
+            value = estado.rut,
+            onValueChange = viewModel::cambiarRut,
+            label = { Text("RUT") },
+            placeholder = { Text("12345678-9") },
+            isError = estado.errorRut.isNotEmpty(),
+            supportingText = {
+                if (estado.errorRut.isNotEmpty()) {
+                    Text(estado.errorRut)
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            enabled = !estado.registrando
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // 5. RUT chileno
+        // Correo
+
         OutlinedTextField(
-            value = rut,
-            onValueChange = { rut = it },
-            label = { Text("RUT chileno") },
-            placeholder = { Text("12.345.678-5") },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Text
-            ),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 6. Correo electrónico
-        OutlinedTextField(
-            value = correo,
-            onValueChange = { correo = it },
+            value = estado.correo,
+            onValueChange = viewModel::cambiarCorreo,
             label = { Text("Correo electrónico") },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email
             ),
+            isError = estado.errorCorreo.isNotEmpty(),
+            supportingText = {
+                if (estado.errorCorreo.isNotEmpty()) {
+                    Text(estado.errorCorreo)
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            enabled = !estado.registrando
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // 7. Contraseña
+        // Contraseña
+
         OutlinedTextField(
-            value = contrasena,
-            onValueChange = { contrasena = it },
+            value = estado.contrasena,
+            onValueChange = viewModel::cambiarContrasena,
             label = { Text("Contraseña") },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password
             ),
+            isError = estado.errorContrasena.isNotEmpty(),
+            supportingText = {
+                if (estado.errorContrasena.isNotEmpty()) {
+                    Text(estado.errorContrasena)
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            enabled = !estado.registrando
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // 8. Confirmar contraseña
+        // Confirmar contraseña
+
         OutlinedTextField(
-            value = confirmarContrasena,
-            onValueChange = { confirmarContrasena = it },
+            value = estado.confirmarContrasena,
+            onValueChange = viewModel::cambiarConfirmacion,
             label = { Text("Confirmar contraseña") },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password
             ),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 9. Aceptación de términos
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-
-            Checkbox(
-                checked = aceptaTerminos,
-                onCheckedChange = { aceptaTerminos = it }
-            )
-
-            Text(
-                text = "Acepto los términos y condiciones"
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // 10. Botón para validar el formulario
-        Button(
-            onClick = {
-
-                mensaje = when {
-
-                    nombre.isBlank() ->
-                        "Debes ingresar tu nombre."
-
-                    rut.isBlank() ->
-                        "Debes ingresar tu RUT."
-
-                    !validarRut(rut) ->
-                        "El RUT ingresado no es válido."
-
-                    correo.isBlank() ->
-                        "Debes ingresar tu correo."
-
-                    !Patterns.EMAIL_ADDRESS
-                        .matcher(correo.trim()).matches() ->
-                        "El correo electrónico no es válido."
-
-                    contrasena.length < 8 ->
-                        "La contraseña debe tener al menos 8 caracteres."
-
-                    contrasena != confirmarContrasena ->
-                        "Las contraseñas no coinciden."
-
-                    !aceptaTerminos ->
-                        "Debes aceptar los términos y condiciones."
-
-                    else ->
-                        "Formulario válido. Aún no se ha guardado la cuenta."
+            isError = estado.errorConfirmacion.isNotEmpty(),
+            supportingText = {
+                if (estado.errorConfirmacion.isNotEmpty()) {
+                    Text(estado.errorConfirmacion)
                 }
             },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            enabled = !estado.registrando
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Aceptar términos
+
+        Row(
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Registrarme")
+            Checkbox(
+                checked = estado.aceptaTerminos,
+                onCheckedChange = viewModel::cambiarTerminos,
+                enabled = !estado.registrando
+            )
+
+            Text(
+                text = "Acepto los términos y condiciones",
+                modifier = Modifier.padding(top = 12.dp)
+            )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 11. Mostrar el resultado de la validación
-        if (mensaje.isNotEmpty()) {
+        if (estado.errorTerminos.isNotEmpty()) {
             Text(
-                text = mensaje,
+                text = estado.errorTerminos,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Registrar
+
+        Button(
+            onClick = viewModel::registrar,
+            enabled = !estado.registrando,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                if (estado.registrando) {
+                    "Registrando..."
+                } else {
+                    "Registrarse"
+                }
+            )
+        }
+
+        // Mensaje de resultado
+
+        if (estado.mensaje.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = estado.mensaje,
                 color = MaterialTheme.colorScheme.primary
             )
         }

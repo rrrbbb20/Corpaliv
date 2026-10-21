@@ -1,11 +1,16 @@
+
 package com.example.corpaliv.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Color principal de CORPALIV
+val VerdePrincipal = Color(0xFF246B68)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// Color secundario para superficies suaves
+val VerdeClaro = Color(0xFFEAF3F1)
+
+// Fondo general de la aplicación
+val FondoClaro = Color(0xFFFAFAFA)
+
+// Color principal de los textos
+val TextoOscuro = Color(0xFF263238)
