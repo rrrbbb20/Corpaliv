@@ -1,145 +1,47 @@
-
 package com.example.corpaliv.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.corpaliv.ui.components.ColumnaPantalla
+import com.example.corpaliv.ui.components.TarjetaInfo
 
 @Composable
 fun HomeScreen(
-    onIrRegistro: () -> Unit,
-    onIrLogin: () -> Unit,
-    onIrQuienesSomos: () -> Unit,
-    onIrProgramas: () -> Unit,
-    onIrDonaciones: () -> Unit
+    onIrRegistro: () -> Unit, onIrLogin: () -> Unit,
+    onIrQuienesSomos: () -> Unit, onIrProgramas: () -> Unit,
+    onIrDonaciones: () -> Unit, onIrSolicitudes: () -> Unit,
+    onIrCuenta: () -> Unit, sesionIniciada: Boolean
 ) {
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp)
-    ) {
-
-        Text(
-            text = "Transformamos vidas",
-            style = MaterialTheme.typography.headlineLarge
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "Apoyamos el desarrollo y la inclusión " +
-                    "de personas con discapacidad múltiple.",
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onIrDonaciones,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Quiero colaborar")
+    var mostrarBienvenida by remember { mutableStateOf(true) }
+    ColumnaPantalla("Transformamos vidas",
+        "Apoyamos el desarrollo y la inclusión de personas con discapacidad múltiple.") {
+        Button(onClick=onIrDonaciones, modifier=Modifier.fillMaxWidth()) { Text("Quiero colaborar") }
+        Spacer(Modifier.height(18.dp))
+        OutlinedButton(onClick={ mostrarBienvenida = !mostrarBienvenida }, modifier=Modifier.fillMaxWidth()) {
+            Text(if (mostrarBienvenida) "Ocultar bienvenida" else "Mostrar bienvenida")
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Descubre CORPALIV",
-            style = MaterialTheme.typography.titleLarge
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Card(
-            onClick = onIrQuienesSomos,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-
-                Text(
-                    text = "Quiénes somos",
-                    style = MaterialTheme.typography.titleMedium
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = "Conoce nuestra historia y propósito."
-                )
-            }
+        AnimatedVisibility(mostrarBienvenida) {
+            Text("Conoce CORPALIV y descubre distintas formas de participar.",
+                modifier=Modifier.padding(vertical=12.dp), color=MaterialTheme.colorScheme.primary)
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Card(
-            onClick = onIrProgramas,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-
-                Text(
-                    text = "Nuestros programas",
-                    style = MaterialTheme.typography.titleMedium
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = "Escuela Jan Van Dijk y Alba Lab."
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Card(
-            onClick = onIrDonaciones,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-
-                Text(
-                    text = "Donaciones",
-                    style = MaterialTheme.typography.titleMedium
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = "Descubre cómo apoyar nuestra labor."
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Mi cuenta",
-            style = MaterialTheme.typography.titleLarge
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedButton(
-            onClick = onIrLogin,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Iniciar sesión")
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextButton(
-            onClick = onIrRegistro,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Crear cuenta")
+        Text("Descubre CORPALIV", style=MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(12.dp))
+        TarjetaInfo("Quiénes somos", "Conoce nuestra historia y propósito.", "Conocer", onIrQuienesSomos)
+        TarjetaInfo("Nuestros programas", "Escuela Jan Van Dijk y Alba Lab.", "Ver programas", onIrProgramas)
+        TarjetaInfo("Donaciones", "Descubre cómo apoyar nuestra labor (simulación académica).", "Ver alternativas", onIrDonaciones)
+        Text("Mi cuenta", style=MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(12.dp))
+        if (sesionIniciada) {
+            Button(onClick=onIrCuenta, modifier=Modifier.fillMaxWidth()) { Text("Ver mi cuenta") }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick=onIrSolicitudes, modifier=Modifier.fillMaxWidth()) { Text("Mis solicitudes") }
+        } else {
+            OutlinedButton(onClick=onIrLogin, modifier=Modifier.fillMaxWidth()) { Text("Iniciar sesión") }
+            TextButton(onClick=onIrRegistro, modifier=Modifier.fillMaxWidth()) { Text("Crear cuenta") }
         }
     }
 }

@@ -1,4 +1,3 @@
-
 package com.example.corpaliv.data.local.model
 
 import androidx.room.Entity
@@ -7,15 +6,10 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "usuarios",
-    indices = [
-        Index(value = ["rut"], unique = true),
-        Index(value = ["correo"], unique = true)
-    ]
+    indices = [Index(value = ["rut"], unique = true), Index(value = ["correo"], unique = true)]
 )
 data class Usuario(
-    @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
-
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val nombre: String,
     val rut: String,
     val correo: String,

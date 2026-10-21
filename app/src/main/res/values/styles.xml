@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Corpaliv" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#246B68</item>
+        <item name="android:navigationBarColor">#FAFAFA</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>
