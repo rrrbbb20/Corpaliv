@@ -1,4 +1,3 @@
-
 package com.example.corpaliv.ui.navigation
 
 import android.net.Uri
@@ -17,317 +16,200 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.corpaliv.data.local.AppDatabase
+import com.example.corpaliv.data.repository.SolicitudRepository
 import com.example.corpaliv.data.repository.UsuarioRepository
 import com.example.corpaliv.ui.components.MenuNavegacion
 import com.example.corpaliv.ui.screens.*
 import com.example.corpaliv.viewmodel.LoginViewModel
 import com.example.corpaliv.viewmodel.RegistroViewModel
+import com.example.corpaliv.viewmodel.SesionViewModel
+import com.example.corpaliv.viewmodel.SolicitudViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavigation() {
-
     val navController = rememberNavController()
-
-    val drawerState = rememberDrawerState(
-        initialValue = DrawerValue.Closed
-    )
-
+    val drawerState = rememberDrawerState(initialValue=DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-
     val entradaActual by navController.currentBackStackEntryAsState()
-
     val rutaActual = entradaActual?.destination?.route
-
-    // Base de datos y repositorio
-
     val context = LocalContext.current
+    val database = remember(context) { AppDatabase.getInstance(context) }
+    val usuarios = remember(database) { UsuarioRepository(database.usuarioDao()) }
+    val solicitudes = remember(database) { SolicitudRepository(database.solicitudDao()) }
 
-    val usuarioRepository = remember(context) {
-        UsuarioRepository(
-            AppDatabase.getInstance(context).usuarioDao()
-        )
+    // Sesión compartida por todas las pantallas y mantenida en preferencias.
+    val sesion: SesionViewModel = viewModel(factory=remember(usuarios, context) {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                SesionViewModel(context.applicationContext, usuarios) as T
+        }
+    })
+    val estadoSesion by sesion.uiState.collectAsState()
+    val usuarioId = estadoSesion.usuarioId
+
+    val registroFactory = remember(usuarios) {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = RegistroViewModel(usuarios) as T
+        }
     }
-
-    // Pantallas secundarias con flecha para regresar
-
-    val esPantallaSecundaria = rutaActual in listOf(
-        "registro_persona",
-        "login",
-        "escuela",
-        "alba_lab",
-        "talleres",
-        "inscripcion_taller/{nombreTaller}",
-        "simular_donacion",
-        "colaboraciones"
-    )
-
-    // Navegación principal
-
-    fun navegar(ruta: String) {
-        if (rutaActual != ruta) {
-            navController.navigate(ruta) {
-                launchSingleTop = true
-                popUpTo("home") {
-                    saveState = true
-                }
-                restoreState = true
-            }
+    val loginFactory = remember(usuarios) {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = LoginViewModel(usuarios) as T
         }
     }
 
+    val secundarias = setOf("registro_persona", "login", "mi_cuenta", "nueva_solicitud",
+        "mis_solicitudes", "escuela", "alba_lab", "talleres", "inscripcion_taller/{nombreTaller}",
+        "simular_donacion", "colaboraciones")
+    val esSecundaria = rutaActual in secundarias
+
+    fun navegarPrincipal(ruta: String) {
+        if (rutaActual != ruta) navController.navigate(ruta) {
+            launchSingleTop=true
+            popUpTo("home") { saveState=true }
+            restoreState=true
+        }
+    }
+    fun irCuenta() {
+        navController.navigate(if (usuarioId != null) "mi_cuenta" else "login") { launchSingleTop=true }
+    }
+    fun irSolicitudes() {
+        navController.navigate(if (usuarioId != null) "mis_solicitudes" else "login") { launchSingleTop=true }
+    }
     ModalNavigationDrawer(
-        drawerState = drawerState,
-        gesturesEnabled = !esPantallaSecundaria,
-        drawerContent = {
+        drawerState=drawerState,
+        gesturesEnabled=!esSecundaria,
+        drawerContent={
             MenuNavegacion(
-                onInicio = {
-                    scope.launch {
-                        drawerState.close()
-                    }
-                    navegar("home")
-                },
-                onQuienesSomos = {
-                    scope.launch {
-                        drawerState.close()
-                    }
-                    navegar("quienes_somos")
-                },
-                onProgramas = {
-                    scope.launch {
-                        drawerState.close()
-                    }
-                    navegar("programas")
-                },
-                onDonaciones = {
-                    scope.launch {
-                        drawerState.close()
-                    }
-                    navegar("donaciones")
-                },
-                onMiCuenta = {
-                    scope.launch {
-                        drawerState.close()
-                    }
-                    navController.navigate("login")
-                }
+                onInicio={scope.launch { drawerState.close() }; navegarPrincipal("home")},
+                onQuienesSomos={scope.launch { drawerState.close() }; navegarPrincipal("quienes_somos")},
+                onProgramas={scope.launch { drawerState.close() }; navegarPrincipal("programas")},
+                onDonaciones={scope.launch { drawerState.close() }; navegarPrincipal("donaciones")},
+                onSolicitudes={scope.launch { drawerState.close() }; irSolicitudes()},
+                onMiCuenta={scope.launch { drawerState.close() }; irCuenta()},
+                conectado=usuarioId != null
             )
         }
     ) {
-
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text("CORPALIV")
-                    },
-                    navigationIcon = {
-                        IconButton(
-                            onClick = {
-                                if (esPantallaSecundaria) {
-                                    navController.popBackStack()
-                                } else {
-                                    scope.launch {
-                                        drawerState.open()
-                                    }
-                                }
-                            }
-                        ) {
-                            Text(
-                                text = if (esPantallaSecundaria) {
-                                    "←"
-                                } else {
-                                    "☰"
-                                },
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                        }
-                    }
-                )
-            }
-        ) { innerPadding ->
-
-            NavHost(
-                navController = navController,
-                startDestination = "home",
-                modifier = Modifier.padding(innerPadding)
-            ) {
-
-                // Inicio
-
+        Scaffold(topBar={
+            TopAppBar(
+                title={Text("CORPALIV")},
+                navigationIcon={
+                    IconButton(onClick={
+                        if (esSecundaria) navController.popBackStack()
+                        else scope.launch { drawerState.open() }
+                    }) { Text(if (esSecundaria) "←" else "☰", style=MaterialTheme.typography.headlineSmall) }
+                }
+            )
+        }) { padding ->
+            NavHost(navController=navController, startDestination="home", modifier=Modifier.padding(padding)) {
                 composable("home") {
                     HomeScreen(
-                        onIrRegistro = {
-                            navController.navigate("registro_persona")
-                        },
-                        onIrLogin = {
-                            navController.navigate("login")
-                        },
-                        onIrQuienesSomos = {
-                            navegar("quienes_somos")
-                        },
-                        onIrProgramas = {
-                            navegar("programas")
-                        },
-                        onIrDonaciones = {
-                            navegar("donaciones")
-                        }
+                        onIrRegistro={navController.navigate("registro_persona")},
+                        onIrLogin={navController.navigate("login")},
+                        onIrQuienesSomos={navegarPrincipal("quienes_somos")},
+                        onIrProgramas={navegarPrincipal("programas")},
+                        onIrDonaciones={navegarPrincipal("donaciones")},
+                        onIrSolicitudes={irSolicitudes()},
+                        onIrCuenta={irCuenta()},
+                        sesionIniciada=usuarioId != null
                     )
                 }
-
-                // Quiénes somos
-
-                composable("quienes_somos") {
-                    QuienesSomosScreen()
-                }
-
-                // Programas
-
+                composable("quienes_somos") { QuienesSomosScreen() }
                 composable("programas") {
                     ProgramasScreen(
-                        onIrEscuela = {
-                            navController.navigate("escuela")
-                        },
-                        onIrAlbaLab = {
-                            navController.navigate("alba_lab")
-                        }
+                        onIrEscuela={navController.navigate("escuela")},
+                        onIrAlbaLab={navController.navigate("alba_lab")}
                     )
                 }
-
-                // Escuela Jan Van Dijk
-
-                composable("escuela") {
-                    EscuelaScreen()
-                }
-
-                // Alba Lab
-
+                composable("escuela") { EscuelaScreen() }
                 composable("alba_lab") {
-                    AlbaLabScreen(
-                        onIrTalleres = {
-                            navController.navigate("talleres")
-                        }
-                    )
+                    AlbaLabScreen(onIrTalleres={navController.navigate("talleres")})
                 }
-
-                // Talleres
-
                 composable("talleres") {
-                    TalleresScreen(
-                        onIrInscripcion = { nombreTaller ->
-
-                            val nombreCodificado = Uri.encode(nombreTaller)
-
-                            navController.navigate(
-                                "inscripcion_taller/$nombreCodificado"
-                            )
-                        }
-                    )
+                    TalleresScreen(onIrInscripcion={nombre ->
+                        navController.navigate("inscripcion_taller/${Uri.encode(nombre)}")
+                    })
                 }
-
-                // Inscripción a talleres
-
-                composable(
-                    route = "inscripcion_taller/{nombreTaller}",
-                    arguments = listOf(
-                        navArgument("nombreTaller") {
-                            type = NavType.StringType
-                        }
-                    )
-                ) { entrada ->
-
-                    val nombreTaller = entrada.arguments
-                        ?.getString("nombreTaller") ?: ""
-
-                    InscripcionTallerScreen(
-                        nombreTaller = nombreTaller
-                    )
+                composable("inscripcion_taller/{nombreTaller}", arguments=listOf(
+                    navArgument("nombreTaller") { type=NavType.StringType }
+                )) { entrada ->
+                    InscripcionTallerScreen(entrada.arguments?.getString("nombreTaller") ?: "")
                 }
-
-                // Donaciones
-
                 composable("donaciones") {
                     DonacionesScreen(
-                        onIrSimularDonacion = {
-                            navController.navigate("simular_donacion")
-                        },
-                        onIrColaboracionEmpresa = {
-                            navController.navigate("colaboraciones")
-                        }
+                        onIrSimularDonacion={navController.navigate("simular_donacion")},
+                        onIrColaboracionEmpresa={navController.navigate("colaboraciones")}
                     )
                 }
-
-                // Simulación de donación
-
-                composable("simular_donacion") {
-                    SimularDonacionScreen()
-                }
-
-                // Colaboraciones empresariales
-
-                composable("colaboraciones") {
-                    ColaboracionesScreen()
-                }
-
-                // Registro de usuarios
-
+                composable("simular_donacion") { SimularDonacionScreen() }
+                composable("colaboraciones") { ColaboracionesScreen() }
                 composable("registro_persona") {
-
-                    val registroViewModel: RegistroViewModel = viewModel(
-                        factory = remember(usuarioRepository) {
-                            object : ViewModelProvider.Factory {
-
-                                @Suppress("UNCHECKED_CAST")
-                                override fun <T : ViewModel> create(
-                                    modelClass: Class<T>
-                                ): T {
-                                    return RegistroViewModel(
-                                        usuarioRepository
-                                    ) as T
-                                }
-                            }
-                        }
-                    )
-
-                    RegistroPersonaScreen(
-                        viewModel = registroViewModel
-                    )
+                    val vm: RegistroViewModel = viewModel(factory=registroFactory)
+                    RegistroPersonaScreen(vm, onIrLogin={navController.navigate("login")})
                 }
-
-                // Inicio de sesión
-
                 composable("login") {
-
-                    val loginViewModel: LoginViewModel = viewModel(
-                        factory = remember(usuarioRepository) {
-                            object : ViewModelProvider.Factory {
-
-                                @Suppress("UNCHECKED_CAST")
-                                override fun <T : ViewModel> create(
-                                    modelClass: Class<T>
-                                ): T {
-                                    return LoginViewModel(
-                                        usuarioRepository
-                                    ) as T
+                    val vm: LoginViewModel = viewModel(factory=loginFactory)
+                    LoginScreen(vm, onLoginExitoso={id ->
+                        sesion.iniciar(id)
+                        navController.navigate("mi_cuenta") {
+                            popUpTo("login") { inclusive=true }
+                            launchSingleTop=true
+                        }
+                    }, onIrRegistro={navController.navigate("registro_persona")})
+                }
+                composable("mi_cuenta") {
+                    when {
+                        estadoSesion.cargando -> CircularProgressIndicator()
+                        usuarioId == null -> PantallaRequiereSesion { navController.navigate("login") }
+                        else -> MiCuentaScreen(
+                            sesion=estadoSesion,
+                            onMisSolicitudes={navController.navigate("mis_solicitudes")},
+                            onNuevaSolicitud={navController.navigate("nueva_solicitud")},
+                            onCerrarSesion={
+                                sesion.cerrarSesion()
+                                navController.navigate("home") {
+                                    popUpTo("home") { inclusive=false }
+                                    launchSingleTop=true
                                 }
                             }
-                        }
-                    )
-
-                    LoginScreen(
-                        viewModel = loginViewModel,
-                        onLoginExitoso = {
-                            navController.navigate("home") {
-                                popUpTo("login") {
-                                    inclusive = true
-                                }
-                                launchSingleTop = true
-                            }
-                        }
-                    )
+                        )
+                    }
+                }
+                composable("nueva_solicitud") {
+                    if (usuarioId == null) PantallaRequiereSesion { navController.navigate("login") }
+                    else {
+                        val factory = remember(solicitudes, usuarioId) { factorySolicitudes(solicitudes, usuarioId) }
+                        val vm: SolicitudViewModel = viewModel(factory=factory)
+                        NuevaSolicitudScreen(vm, onVerSolicitudes={navController.navigate("mis_solicitudes")})
+                    }
+                }
+                composable("mis_solicitudes") {
+                    if (usuarioId == null) PantallaRequiereSesion { navController.navigate("login") }
+                    else {
+                        val factory = remember(solicitudes, usuarioId) { factorySolicitudes(solicitudes, usuarioId) }
+                        val vm: SolicitudViewModel = viewModel(factory=factory)
+                        MisSolicitudesScreen(vm, onNuevaSolicitud={navController.navigate("nueva_solicitud")})
+                    }
                 }
             }
         }
     }
+}
+
+private fun factorySolicitudes(repo: SolicitudRepository, usuarioId: Int): ViewModelProvider.Factory =
+    object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            SolicitudViewModel(repo, usuarioId) as T
+    }
+
+@Composable
+private fun PantallaRequiereSesion(onIrLogin: () -> Unit) {
+    Button(onClick=onIrLogin) { Text("Inicia sesión para continuar") }
 }

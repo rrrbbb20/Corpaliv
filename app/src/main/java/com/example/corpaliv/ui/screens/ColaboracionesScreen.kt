@@ -1,39 +1,103 @@
-
 package com.example.corpaliv.ui.screens
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.corpaliv.ui.components.CampoTexto
+import com.example.corpaliv.ui.components.ColumnaPantalla
+import com.example.corpaliv.ui.components.MensajeAnimado
+import com.example.corpaliv.utils.Validaciones
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ColaboracionesScreen() {
-
-    // 1. Datos del formulario
-    var nombreEmpresa by remember { mutableStateOf("") }
+    var empresa by remember { mutableStateOf("") }
     var telefono by remember { mutableStateOf("") }
-    var tipoColaboracion by remember { mutableStateOf("") }
+    var tipo by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
-
-    // 2. Estado del menú desplegable
-    var menuExpandido by remember { mutableStateOf(false) }
-
-    // 3. Errores de validación
+    var expandido by remember { mutableStateOf(false) }
     var errorEmpresa by remember { mutableStateOf("") }
     var errorTelefono by remember { mutableStateOf("") }
     var errorTipo by remember { mutableStateOf("") }
     var errorDescripcion by remember { mutableStateOf("") }
+    var mensaje by remember { mutableStateOf("") }
 
-    // 4. Resultado del formulario
-    var formularioValido by remember { mutableStateOf(false) }
+    // La fotografía es OPCIONAL y solo se utiliza en esta simulación.
+    // TakePicturePreview devuelve una miniatura, no una foto a tamaño completo.
+    val context = LocalContext.current
+    var fotoCamara by remember { mutableStateOf<Bitmap?>(null) }
+    var uriGaleria by remember { mutableStateOf<Uri?>(null) }
+    var fotoGaleria by remember { mutableStateOf<Bitmap?>(null) }
+    var mensajeImagen by remember { mutableStateOf("") }
 
-    // 5. Tipos de colaboración disponibles
+    val camara = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { foto ->
+        if (foto != null) {
+            fotoCamara = foto
+            fotoGaleria = null
+            uriGaleria = null
+            mensajeImagen = "Fotografía tomada. Puedes revisar la vista previa."
+            mensaje = ""
+        } else {
+            mensajeImagen = "No se tomó ninguna fotografía."
+        }
+    }
+
+    // GetContent permite elegir una imagen sin pedir acceso a toda la galería.
+    val galeria = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            uriGaleria = uri
+            fotoCamara = null
+            fotoGaleria = null
+            mensajeImagen = "Cargando imagen seleccionada..."
+            mensaje = ""
+        } else {
+            mensajeImagen = "No se seleccionó otra imagen."
+        }
+    }
+
+    LaunchedEffect(uriGaleria) {
+        val uri = uriGaleria ?: return@LaunchedEffect
+        fotoGaleria = withContext(Dispatchers.IO) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    BitmapFactory.decodeStream(
+                        stream,
+                        null,
+                        BitmapFactory.Options().apply { inSampleSize = 4 }
+                    )
+                }
+            } catch (_: Exception) {
+                null
+            }
+        }
+        mensajeImagen = if (fotoGaleria == null) {
+            "No se pudo mostrar la imagen. Intenta con otra."
+        } else {
+            "Imagen seleccionada. Puedes revisar la vista previa."
+        }
+    }
+
+    val imagenAdjunta = fotoCamara ?: fotoGaleria
     val tipos = listOf(
         "Donación de recursos",
         "Apoyo a talleres",
@@ -41,232 +105,112 @@ fun ColaboracionesScreen() {
         "Otra colaboración"
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp)
+    ColumnaPantalla(
+        "Colaboración empresarial",
+        "Registra una propuesta ficticia. No se envía a CORPALIV."
     ) {
-
-        Text(
-            text = "Colaboración empresarial",
-            style = MaterialTheme.typography.headlineMedium
+        CampoTexto(
+            empresa, { empresa = it; errorEmpresa = ""; mensaje = "" },
+            "Nombre de la empresa", errorEmpresa
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Envía una propuesta de colaboración " +
-                    "en nombre de una empresa. " +
-                    "Este formulario es una simulación académica."
+        CampoTexto(
+            telefono,
+            { telefono = it.filter(Char::isDigit).take(9); errorTelefono = ""; mensaje = "" },
+            "Teléfono de contacto", errorTelefono, KeyboardType.Phone
         )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // NOMBRE DE LA EMPRESA
-        OutlinedTextField(
-            value = nombreEmpresa,
-            onValueChange = {
-                nombreEmpresa = it
-                errorEmpresa = ""
-                formularioValido = false
-            },
-            label = { Text("Nombre de la empresa") },
-            isError = errorEmpresa.isNotEmpty(),
-            supportingText = {
-                if (errorEmpresa.isNotEmpty()) {
-                    Text(errorEmpresa)
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // TELÉFONO
-        OutlinedTextField(
-            value = telefono,
-            onValueChange = { valor ->
-                telefono = valor
-                    .filter { it.isDigit() }
-                    .take(9)
-
-                errorTelefono = ""
-                formularioValido = false
-            },
-            label = { Text("Teléfono de contacto") },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Phone
-            ),
-            isError = errorTelefono.isNotEmpty(),
-            supportingText = {
-                if (errorTelefono.isNotEmpty()) {
-                    Text(errorTelefono)
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // TIPO DE COLABORACIÓN
-        ExposedDropdownMenuBox(
-            expanded = menuExpandido,
-            onExpandedChange = {
-                menuExpandido = !menuExpandido
-            }
-        ) {
-
+        ExposedDropdownMenuBox(expanded = expandido, onExpandedChange = { expandido = !expandido }) {
             OutlinedTextField(
-                value = tipoColaboracion,
+                value = tipo,
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Tipo de colaboración") },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(
-                        expanded = menuExpandido
-                    )
-                },
                 isError = errorTipo.isNotEmpty(),
-                supportingText = {
-                    if (errorTipo.isNotEmpty()) {
-                        Text(errorTipo)
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
+                supportingText = if (errorTipo.isNotBlank()) { { Text(errorTipo) } } else null,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandido) },
+                modifier = Modifier.menuAnchor().fillMaxWidth()
             )
-
-            ExposedDropdownMenu(
-                expanded = menuExpandido,
-                onDismissRequest = {
-                    menuExpandido = false
-                }
-            ) {
-
+            ExposedDropdownMenu(expanded = expandido, onDismissRequest = { expandido = false }) {
                 tipos.forEach { opcion ->
-
                     DropdownMenuItem(
                         text = { Text(opcion) },
-                        onClick = {
-                            tipoColaboracion = opcion
-                            menuExpandido = false
-                            errorTipo = ""
-                            formularioValido = false
-                        }
+                        onClick = { tipo = opcion; expandido = false; errorTipo = ""; mensaje = "" }
                     )
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // DESCRIPCIÓN DE LA PROPUESTA
-        OutlinedTextField(
-            value = descripcion,
-            onValueChange = {
-                descripcion = it
-                errorDescripcion = ""
-                formularioValido = false
-            },
-            label = { Text("Describe tu propuesta") },
-            minLines = 3,
-            maxLines = 5,
-            isError = errorDescripcion.isNotEmpty(),
-            supportingText = {
-                if (errorDescripcion.isNotEmpty()) {
-                    Text(errorDescripcion)
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
+        Spacer(Modifier.height(10.dp))
+        CampoTexto(
+            descripcion,
+            { descripcion = it; errorDescripcion = ""; mensaje = "" },
+            "Describe tu propuesta", errorDescripcion, lineas = 3
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // VALIDAR SOLICITUD
-        Button(
-            onClick = {
-
-                errorEmpresa = if (nombreEmpresa.isBlank()) {
-                    "Ingresa el nombre de la empresa."
-                } else {
-                    ""
-                }
-
-                errorTelefono = if (telefono.length != 9) {
-                    "El teléfono debe tener 9 dígitos."
-                } else {
-                    ""
-                }
-
-                errorTipo = if (tipoColaboracion.isBlank()) {
-                    "Selecciona un tipo de colaboración."
-                } else {
-                    ""
-                }
-
-                errorDescripcion =
-                    if (descripcion.trim().length < 10) {
-                        "La descripción debe tener al menos 10 caracteres."
-                    } else {
-                        ""
-                    }
-
-                formularioValido = listOf(
-                    errorEmpresa,
-                    errorTelefono,
-                    errorTipo,
-                    errorDescripcion
-                ).all { it.isEmpty() }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Enviar solicitud de prueba")
+        // Recursos nativos integrados en el formulario, no en otra pantalla.
+        Text("Imagen de los materiales (opcional)", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Puedes fotografiar o seleccionar una imagen de los materiales ofrecidos.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Spacer(Modifier.height(12.dp))
+        Button(onClick = { camara.launch(null) }, modifier = Modifier.fillMaxWidth()) {
+            Text("Tomar fotografía")
+        }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = { galeria.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
+            Text("Seleccionar de galería")
         }
 
-        // RESULTADO
-        if (formularioValido) {
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-
-                    Text(
-                        text = "Solicitud validada",
-                        style = MaterialTheme.typography.titleLarge
+        if (imagenAdjunta != null) {
+            Spacer(Modifier.height(14.dp))
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("Vista previa del adjunto", style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(8.dp))
+                    Image(
+                        bitmap = imagenAdjunta.asImageBitmap(),
+                        contentDescription = "Fotografía de los materiales de la colaboración",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 260.dp)
+                            .clip(RoundedCornerShape(12.dp))
                     )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text("Empresa: $nombreEmpresa")
-
-                    Text("Teléfono: $telefono")
-
-                    Text("Colaboración: $tipoColaboracion")
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "La solicitud es de prueba. " +
-                                "Todavía no se ha guardado ni enviado."
-                    )
+                    TextButton(onClick = {
+                        fotoCamara = null
+                        fotoGaleria = null
+                        uriGaleria = null
+                        mensajeImagen = "Imagen quitada de la propuesta."
+                        mensaje = ""
+                    }) { Text("Quitar imagen") }
                 }
             }
         }
+        if (mensajeImagen.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(mensajeImagen, style = MaterialTheme.typography.bodySmall)
+        }
 
-        Spacer(modifier = Modifier.height(20.dp))
-
+        Spacer(Modifier.height(20.dp))
+        Button(onClick = {
+            errorEmpresa = Validaciones.nombre(empresa)
+            errorTelefono = Validaciones.telefono(telefono)
+            errorTipo = if (tipo.isBlank()) "Selecciona un tipo." else ""
+            errorDescripcion = Validaciones.descripcion(descripcion)
+            mensaje = if (listOf(errorEmpresa, errorTelefono, errorTipo, errorDescripcion).all(String::isEmpty)) {
+                if (imagenAdjunta != null) {
+                    "Propuesta de prueba validada con imagen adjunta. No se ha guardado ni enviado."
+                } else {
+                    "Propuesta de prueba validada sin imagen. No se ha guardado ni enviado."
+                }
+            } else ""
+        }, modifier = Modifier.fillMaxWidth()) {
+            Text("Validar propuesta de prueba")
+        }
+        MensajeAnimado(mensaje)
         Text(
-            text = "Simulación académica. Utiliza datos ficticios.",
+            "Simulación académica: utiliza datos e imágenes ficticios. " +
+                "La fotografía solo se muestra en este formulario; no se guarda ni se envía.",
             style = MaterialTheme.typography.bodySmall
         )
     }
